@@ -30,6 +30,7 @@ use std::rc::Rc;
 #[cfg(feature = "structopt")]
 use structopt::StructOpt;
 use wasmtime::{Engine, Extern};
+use wasmtime_wasi::pipe::{MemoryInputPipe, MemoryOutputPipe};
 use wasmtime_wasi::{
     preview1::{self, WasiP1Ctx},
     WasiCtxBuilder,
@@ -559,6 +560,18 @@ impl Wizer {
     /// Initialize the given Wasm, snapshot it, and return the serialized
     /// snapshot as a new, pre-initialized Wasm module.
     pub fn run(&self, wasm: &[u8]) -> anyhow::Result<Vec<u8>> {
+        self.run_with_io(wasm, None, None, None)
+    }
+
+    /// Initialize the given Wasm, snapshot it, and return the serialized
+    /// snapshot as a new, pre-initialized Wasm module.
+    pub fn run_with_io(
+        &self,
+        wasm: &[u8],
+        stdin: Option<MemoryInputPipe>,
+        stdout: Option<MemoryOutputPipe>,
+        stderr: Option<MemoryOutputPipe>,
+    ) -> anyhow::Result<Vec<u8>> {
         // Parse rename spec.
         let renames = FuncRenames::parse(&self.func_renames)?;
 
@@ -584,7 +597,7 @@ impl Wizer {
 
         let config = self.wasmtime_config()?;
         let engine = wasmtime::Engine::new(&config)?;
-        let wasi_ctx = self.wasi_context()?;
+        let wasi_ctx = self.wasi_context(stdin, stdout, stderr)?;
         let mut store = wasmtime::Store::new(&engine, StoreData { wasi_ctx });
         let module = wasmtime::Module::new(&engine, &instrumented_wasm)
             .context("failed to compile the Wasm module")?;
@@ -592,13 +605,8 @@ impl Wizer {
 
         let (instance, has_wasi_initialize) = self.initialize(&engine, &mut store, &module)?;
         let snapshot = snapshot::snapshot(&mut store, &instance);
-        let rewritten_wasm = self.rewrite(
-            &mut cx,
-            &mut store,
-            &snapshot,
-            &renames,
-            has_wasi_initialize,
-        );
+        let rewritten_wasm =
+            self.rewrite(&mut cx, &store, &snapshot, &renames, has_wasi_initialize);
 
         if cfg!(debug_assertions) {
             if let Err(error) = self.wasm_validate(&rewritten_wasm) {
@@ -779,7 +787,12 @@ impl Wizer {
         Ok(())
     }
 
-    fn wasi_context(&self) -> anyhow::Result<Option<WasiP1Ctx>> {
+    fn wasi_context(
+        &self,
+        stdin: Option<MemoryInputPipe>,
+        stdout: Option<MemoryOutputPipe>,
+        stderr: Option<MemoryOutputPipe>,
+    ) -> anyhow::Result<Option<WasiP1Ctx>> {
         if !self.allow_wasi {
             return Ok(None);
         }
@@ -787,6 +800,15 @@ impl Wizer {
         let mut ctx = WasiCtxBuilder::new();
         if self.inherit_stdio.unwrap_or(DEFAULT_INHERIT_STDIO) {
             ctx.inherit_stdio();
+        }
+        if let Some(file) = stdin {
+            ctx.stdin(file);
+        }
+        if let Some(file) = stdout {
+            ctx.stdout(file);
+        }
+        if let Some(file) = stderr {
+            ctx.stderr(file);
         }
         if self.inherit_env.unwrap_or(DEFAULT_INHERIT_ENV) {
             ctx.inherit_env();
