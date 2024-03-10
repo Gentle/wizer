@@ -30,7 +30,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 #[cfg(feature = "structopt")]
 use structopt::StructOpt;
-use wasi_common::WasiCtx;
+use wasi_common::{WasiCtx, WasiFile};
 use wasmtime::{Engine, Extern};
 
 const DEFAULT_INHERIT_STDIO: bool = true;
@@ -550,6 +550,18 @@ impl Wizer {
     /// Initialize the given Wasm, snapshot it, and return the serialized
     /// snapshot as a new, pre-initialized Wasm module.
     pub fn run(&self, wasm: &[u8]) -> anyhow::Result<Vec<u8>> {
+        self.run_with_io(wasm, None, None, None)
+    }
+
+    /// Initialize the given Wasm, snapshot it, and return the serialized
+    /// snapshot as a new, pre-initialized Wasm module.
+    pub fn run_with_io(
+        &self,
+        wasm: &[u8],
+        stdin: Option<Box<dyn WasiFile>>,
+        stdout: Option<Box<dyn WasiFile>>,
+        stderr: Option<Box<dyn WasiFile>>,
+    ) -> anyhow::Result<Vec<u8>> {
         // Parse rename spec.
         let renames = FuncRenames::parse(&self.func_renames)?;
 
@@ -575,7 +587,18 @@ impl Wizer {
 
         let config = self.wasmtime_config()?;
         let engine = wasmtime::Engine::new(&config)?;
-        let wasi_ctx = self.wasi_context()?;
+        let wasi_ctx = self.wasi_context()?.map(|ctx| {
+            if let Some(file) = stdin {
+                ctx.set_stdin(file);
+            }
+            if let Some(file) = stdout {
+                ctx.set_stdout(file);
+            }
+            if let Some(file) = stderr {
+                ctx.set_stderr(file);
+            }
+            ctx
+        });
         let mut store = wasmtime::Store::new(&engine, wasi_ctx);
         let module = wasmtime::Module::new(&engine, &instrumented_wasm)
             .context("failed to compile the Wasm module")?;
