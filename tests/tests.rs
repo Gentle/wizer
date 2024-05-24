@@ -91,10 +91,9 @@ fn fails_wizening(wat: &str) -> Result<()> {
 
     let wasm = wat_to_wasm(wat)?;
 
-    let mut validator = wasmparser::Validator::new_with_features(wasmparser::WasmFeatures {
-        multi_memory: true,
-        ..Default::default()
-    });
+    let mut features = wasmparser::WasmFeatures::default();
+    features.set(wasmparser::WasmFeatures::MULTI_MEMORY, true);
+    let mut validator = wasmparser::Validator::new_with_features(features);
     validator
         .validate_all(&wasm)
         .context("initial Wasm should be valid")?;
@@ -622,6 +621,7 @@ fn accept_bulk_memory_data_count() -> Result<()> {
         maximum: Some(1),
         memory64: false,
         shared: false,
+        page_size_log2: None,
     });
     module.section(&memory);
 

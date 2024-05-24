@@ -632,7 +632,7 @@ impl Wizer {
 
     // NB: keep this in sync with the Wasmtime config.
     fn wasm_features(&self) -> wasmparser::WasmFeatures {
-        wasmparser::WasmFeatures {
+        wasmparser::WasmFeaturesInflated {
             mutable_global: true,
             saturating_float_to_int: true,
             sign_extension: true,
@@ -657,6 +657,8 @@ impl Wizer {
             memory_control: false,
             function_references: false,
             gc: false,
+            shared_everything_threads: false,
+            custom_page_sizes: false,
 
             // XXX: Though we don't fully support bulk memory yet, we
             // unconditionally turn it on.
@@ -683,6 +685,7 @@ impl Wizer {
             // until we *actually* support bulk memory.
             bulk_memory: true,
         }
+        .into()
     }
 
     fn wasm_validate(&self, wasm: &[u8]) -> anyhow::Result<()> {

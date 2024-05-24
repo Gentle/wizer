@@ -56,7 +56,7 @@ impl Wizer {
                 // Some tools expect the name custom section to come last, even
                 // though custom sections are allowed in any order. Therefore,
                 // make sure we've added our data section by now.
-                s if is_name_section(s) => {
+                s if is_name_section(s, self.wasm_features()) => {
                     add_data_section(&mut encoder);
                     encoder.section(s);
                 }
@@ -164,9 +164,9 @@ impl Wizer {
     }
 }
 
-fn is_name_section(s: &wasm_encoder::RawSection) -> bool {
+fn is_name_section(s: &wasm_encoder::RawSection, features: wasmparser::WasmFeatures) -> bool {
     s.id == u8::from(SectionId::Custom) && {
-        let mut reader = wasmparser::BinaryReader::new(s.data);
+        let mut reader = wasmparser::BinaryReader::new(s.data, 0, features);
         matches!(reader.read_string(), Ok("name"))
     }
 }
