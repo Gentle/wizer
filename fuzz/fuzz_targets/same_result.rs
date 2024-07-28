@@ -35,8 +35,9 @@ fuzz_target!(|data: &[u8]| {
     // We want small memories that are quick to compare, but we also want to
     // allow memories to grow so we can shake out any memory-growth-related
     // bugs, so we choose `2` instead of `1`.
-    config.max_memory32_pages = 2;
-    config.max_memory64_pages = 2;
+    // FIXME: this comment is outdated
+    config.max_memory32_bytes = 65535;
+    config.max_memory64_bytes = 65535;
 
     // Always generate at least one function that we can hopefully use as an
     // initialization function.
