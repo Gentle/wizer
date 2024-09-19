@@ -696,6 +696,8 @@ impl Wizer {
             // that no table-mutating instructions exist in our input modules
             // until we *actually* support bulk memory.
             bulk_memory: true,
+
+            gc_types: false,
         }
         .into()
     }
