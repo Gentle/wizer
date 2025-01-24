@@ -790,6 +790,39 @@ impl Wizer {
                             wasmparser::Operator::TableFill { .. } => {
                                 anyhow::bail!("unsupported `table.fill` instruction")
                             }
+                            wasmparser::Operator::RefNull { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::RefIsNull => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TypedSelect { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::RefFunc { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableGet { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableSet { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableSize { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableGrow { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableFill { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableInit { .. } => {
+                                unreachable!("part of reference types")
+                            }
+                            wasmparser::Operator::TableCopy { .. } => {
+                                unreachable!("part of reference types")
+                            }
                             _ => continue,
                         }
                     }
